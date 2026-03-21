@@ -96,6 +96,7 @@ urlpatterns = oauth2_urlpatterns + [
     path('', contentstore_views.howitworks, name='homepage'),
     path('howitworks', contentstore_views.howitworks, name='howitworks'),
     path('signin_redirect_to_lms', contentstore_views.login_redirect_to_lms, name='login_redirect_to_lms'),
+    path('login/', contentstore_views.studio_login_view, name='studio_login'),
     path('request_course_creator', contentstore_views.request_course_creator, name='request_course_creator'),
     re_path(fr'^course_team/{COURSELIKE_KEY_PATTERN}(?:/(?P<email>.+))?$',
             contentstore_views.course_team_handler, name='course_team_handler'),
@@ -201,9 +202,8 @@ urlpatterns = oauth2_urlpatterns + [
 ]
 
 if not settings.DISABLE_DEPRECATED_SIGNIN_URL:
-    # TODO: Remove deprecated signin url when traffic proves it is no longer in use
     urlpatterns += [
-        path('signin', contentstore_views.login_redirect_to_lms),
+        path('signin', contentstore_views.studio_login_view),
     ]
 
 if not settings.DISABLE_DEPRECATED_SIGNUP_URL:

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In — {{ platform_name }} Studio</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .login-container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.1);
+            padding: 48px 40px;
+            width: 100%;
+            max-width: 420px;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .logo h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+        .logo span {
+            font-size: 14px;
+            color: #888;
+            display: block;
+            margin-top: 4px;
+        }
+        .error-message {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 6px;
+        }
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #1a1a2e;
+            box-shadow: 0 0 0 3px rgba(26,26,46,0.1);
+        }
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: #1a1a2e;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-login:hover {
+            background: #0f3460;
+        }
+        .btn-login:active {
+            background: #0a2540;
+        }
+        .footer-text {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 13px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1>{{ platform_name }}</h1>
+            <span>Studio — Course Authoring</span>
+        </div>
+
+        {% if error_message %}
+        <div class="error-message">
+            {{ error_message }}
+        </div>
+        {% endif %}
+
+        <form method="post" action="">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next_url }}">
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required autofocus
+                       placeholder="admin@example.com">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required
+                       placeholder="Enter your password">
+            </div>
+
+            <button type="submit" class="btn-login">Sign In</button>
+        </form>
+
+        <p class="footer-text">
+            Only staff and admin accounts can access Studio.
+        </p>
+    </div>
+</body>
+</html>

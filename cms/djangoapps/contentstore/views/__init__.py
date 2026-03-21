@@ -13,6 +13,7 @@ from .block import *
 from .library import *
 from .preview import *
 from .public import *
+from .studio_login import studio_login_view
 from .tabs import *
 from .transcript_settings import *
 from .transcripts_ajax import *
