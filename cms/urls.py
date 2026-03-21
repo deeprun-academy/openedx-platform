@@ -46,9 +46,11 @@ COURSELIKE_KEY_PATTERN = r'(?P<course_key_string>({}|{}))'.format(
 # Pattern to match a library key only
 LIBRARY_KEY_PATTERN = r'(?P<library_key_string>library-v1:[^/+]+\+[^/+]+)'
 
-# oauth2_urlpatterns needs to be first to override any other login and
-# logout related views.
-urlpatterns = oauth2_urlpatterns + [
+# Deeprun: custom Studio login must come before OAuth URLs
+urlpatterns = [
+    path('login/', contentstore_views.studio_login_view, name='studio_login'),
+    path('signin', contentstore_views.studio_login_view, name='studio_signin'),
+] + oauth2_urlpatterns + [
     path('', include('openedx.core.djangoapps.user_authn.urls_common')),
     path('', include('common.djangoapps.student.urls')),
     path('transcripts/upload', contentstore_views.upload_transcripts, name='upload_transcripts'),
@@ -96,7 +98,6 @@ urlpatterns = oauth2_urlpatterns + [
     path('', contentstore_views.howitworks, name='homepage'),
     path('howitworks', contentstore_views.howitworks, name='howitworks'),
     path('signin_redirect_to_lms', contentstore_views.login_redirect_to_lms, name='login_redirect_to_lms'),
-    path('login/', contentstore_views.studio_login_view, name='studio_login'),
     path('request_course_creator', contentstore_views.request_course_creator, name='request_course_creator'),
     re_path(fr'^course_team/{COURSELIKE_KEY_PATTERN}(?:/(?P<email>.+))?$',
             contentstore_views.course_team_handler, name='course_team_handler'),
@@ -202,9 +203,7 @@ urlpatterns = oauth2_urlpatterns + [
 ]
 
 if not settings.DISABLE_DEPRECATED_SIGNIN_URL:
-    urlpatterns += [
-        path('signin', contentstore_views.studio_login_view),
-    ]
+    pass  # signin already handled at the top of urlpatterns
 
 if not settings.DISABLE_DEPRECATED_SIGNUP_URL:
     # TODO: Remove deprecated signup url when traffic proves it is no longer in use
