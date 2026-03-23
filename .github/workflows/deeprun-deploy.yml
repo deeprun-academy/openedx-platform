@@ -1,0 +1,191 @@
+name: Deeprun Deploy
+
+on:
+  push:
+    branches:
+      - deeprun/dev
+      - deeprun/stable
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - uat
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/deeprun-academy/openedx
+
+jobs:
+  # ─────────────────────────────────────────
+  # Build image in CI and push to GHCR
+  # ─────────────────────────────────────────
+  build:
+    name: Build & Push Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_tag: ${{ steps.tag.outputs.tag }}
+
+    steps:
+      - name: Determine tag and branch
+        id: tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            case "${{ github.event.inputs.environment }}" in
+              dev) echo "tag=dev" >> $GITHUB_OUTPUT; echo "branch=deeprun/dev" >> $GITHUB_OUTPUT ;;
+              uat) echo "tag=uat" >> $GITHUB_OUTPUT; echo "branch=deeprun/stable" >> $GITHUB_OUTPUT ;;
+            esac
+          elif [[ "${{ github.ref }}" == "refs/heads/deeprun/dev" ]]; then
+            echo "tag=dev" >> $GITHUB_OUTPUT
+            echo "branch=deeprun/stable" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/deeprun/stable" ]]; then
+            echo "tag=uat" >> $GITHUB_OUTPUT
+            echo "branch=deeprun/stable" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout tutor
+        uses: actions/checkout@v4
+        with:
+          repository: deeprun-academy/tutor
+          ref: tutor-v20
+          path: tutor
+
+      - name: Checkout tutor-config
+        uses: actions/checkout@v4
+        with:
+          repository: deeprun-academy/tutor-config
+          ref: main
+          path: tutor-config
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Tutor
+        run: pip install -e ./tutor
+
+      - name: Install deeprun plugin
+        run: |
+          PLUGIN_ROOT=$(tutor plugins printroot)
+          mkdir -p "$PLUGIN_ROOT"
+          cp tutor-config/plugins/deeprun.py "$PLUGIN_ROOT/deeprun.py"
+          tutor plugins enable deeprun
+
+      - name: Configure Tutor
+        run: |
+          tutor config save \
+            --set EDX_PLATFORM_VERSION=${{ steps.tag.outputs.branch }} \
+            --set DOCKER_IMAGE_OPENEDX=${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        timeout-minutes: 40
+        run: |
+          cd $(tutor config printroot)/env/build/openedx
+          docker buildx build \
+            --tag ${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} \
+            --tag ${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}-${{ github.sha }} \
+            --push \
+            .
+
+  # ─────────────────────────────────────────
+  # Deploy to Dev
+  # ─────────────────────────────────────────
+  deploy-dev:
+    name: Deploy to Dev
+    needs: build
+    if: needs.build.outputs.image_tag == 'dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Deploy to dev server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEV_SERVER_IP }}
+          username: ubuntu
+          key: ${{ secrets.DEV_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            source ~/.tutor-venv/bin/activate
+
+            echo "=== Login to GHCR ==="
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u deeprun-academy --password-stdin
+
+            echo "=== Pulling image ==="
+            docker pull ghcr.io/deeprun-academy/openedx:dev
+
+            echo "=== Configuring Tutor to use GHCR image ==="
+            tutor config save \
+              --set DOCKER_IMAGE_OPENEDX=ghcr.io/deeprun-academy/openedx:dev
+
+            echo "=== Restarting ==="
+            tutor local stop
+            tutor local start -d
+
+            echo "=== Running migrations ==="
+            tutor local run lms ./manage.py lms migrate --noinput
+            tutor local run cms ./manage.py cms migrate --noinput
+
+            echo "=== Dev deploy complete ==="
+
+  # ─────────────────────────────────────────
+  # Deploy to UAT
+  # ─────────────────────────────────────────
+  deploy-uat:
+    name: Deploy to UAT
+    needs: build
+    if: needs.build.outputs.image_tag == 'uat'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Deploy to UAT server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.UAT_SERVER_IP }}
+          username: ubuntu
+          key: ${{ secrets.UAT_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            source ~/.tutor-venv/bin/activate
+
+            echo "=== Login to GHCR ==="
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u deeprun-academy --password-stdin
+
+            echo "=== Pulling image ==="
+            docker pull ghcr.io/deeprun-academy/openedx:uat
+
+            echo "=== Configuring Tutor to use GHCR image ==="
+            tutor config save \
+              --set DOCKER_IMAGE_OPENEDX=ghcr.io/deeprun-academy/openedx:uat
+
+            echo "=== Restarting ==="
+            tutor local stop
+            tutor local start -d
+
+            echo "=== Running migrations ==="
+            tutor local run lms ./manage.py lms migrate --noinput
+            tutor local run cms ./manage.py cms migrate --noinput
+
+            echo "=== UAT deploy complete ==="
