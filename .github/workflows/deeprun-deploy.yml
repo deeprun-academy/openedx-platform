@@ -47,7 +47,7 @@ jobs:
             esac
           elif [[ "${{ github.ref }}" == "refs/heads/deeprun/dev" ]]; then
             echo "tag=dev" >> $GITHUB_OUTPUT
-            echo "branch=deeprun/stable" >> $GITHUB_OUTPUT
+            echo "branch=deeprun/dev" >> $GITHUB_OUTPUT
           elif [[ "${{ github.ref }}" == "refs/heads/deeprun/stable" ]]; then
             echo "tag=uat" >> $GITHUB_OUTPUT
             echo "branch=deeprun/stable" >> $GITHUB_OUTPUT
