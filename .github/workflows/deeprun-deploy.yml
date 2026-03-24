@@ -140,8 +140,7 @@ jobs:
               --set DOCKER_IMAGE_OPENEDX=ghcr.io/deeprun-academy/openedx:dev
 
             echo "=== Restarting ==="
-            tutor local stop
-            tutor local start -d
+            docker compose -f ~/.local/share/tutor/env/local/docker-compose.yml -f ~/.local/share/tutor/env/local/docker-compose.prod.yml --project-name tutor_local up --remove-orphans -d
 
             echo "=== Running migrations ==="
             tutor local run lms ./manage.py lms migrate --noinput
@@ -181,8 +180,7 @@ jobs:
               --set DOCKER_IMAGE_OPENEDX=ghcr.io/deeprun-academy/openedx:uat
 
             echo "=== Restarting ==="
-            tutor local stop
-            tutor local start -d
+            docker compose -f ~/.local/share/tutor/env/local/docker-compose.yml -f ~/.local/share/tutor/env/local/docker-compose.prod.yml --project-name tutor_local up --remove-orphans -d
 
             echo "=== Running migrations ==="
             tutor local run lms ./manage.py lms migrate --noinput
