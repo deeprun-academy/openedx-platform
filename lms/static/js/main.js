@@ -8,7 +8,7 @@
   $(function() {
     $.ajaxSetup({
       headers: {
-        'X-CSRFToken': $.cookie('csrftoken')
+        'X-CSRFToken': $('meta[name="csrf-token"]').attr('content') || $.cookie('csrftoken')
       },
       dataType: 'json'
     });
