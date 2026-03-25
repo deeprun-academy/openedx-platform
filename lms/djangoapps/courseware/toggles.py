@@ -173,7 +173,12 @@ def courseware_mfe_is_active() -> bool:
     """
     Should we serve the Learning MFE as the canonical courseware experience?
     """
+    from django.conf import settings
     from lms.djangoapps.courseware.access_utils import in_preview_mode  # avoid a circular import
+
+    # If the Learning MFE URL is not configured, use legacy views
+    if not getattr(settings, 'LEARNING_MICROFRONTEND_URL', None):
+        return False
 
     # We only use legacy views for the Studio "preview mode" feature these days, while everyone else gets the MFE
     return not in_preview_mode()
