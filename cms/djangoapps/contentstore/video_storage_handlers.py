@@ -909,15 +909,65 @@ def send_video_status_update(updates):
     Update video status in edx-val.
     """
     for update in updates:
-        update_video_status(update.get('edxVideoId'), update.get('status'))
+        edx_video_id = update.get('edxVideoId')
+        status = update.get('status')
+        update_video_status(edx_video_id, status)
         LOGGER.info(
             'VIDEOS: Video status update with id [%s], status [%s] and message [%s]',
-            update.get('edxVideoId'),
-            update.get('status'),
+            edx_video_id,
+            status,
             update.get('message')
         )
 
+        # Auto-register S3 URL as encoded video when upload completes
+        if status == 'upload_completed':
+            _register_encoded_video_from_s3(edx_video_id)
+
     return JsonResponse()
+
+
+def _register_encoded_video_from_s3(edx_video_id):
+    """
+    After a video upload to S3 completes, create an EncodedVideo record
+    so the video player can find and play the file.
+    """
+    try:
+        from edxval.models import Video, EncodedVideo, Profile
+
+        video = Video.objects.get(edx_video_id=edx_video_id)
+
+        # Build the S3 URL from the upload pipeline config
+        bucket = settings.VIDEO_UPLOAD_PIPELINE.get('BUCKET', '')
+        root_path = settings.VIDEO_UPLOAD_PIPELINE.get('ROOT_PATH', '')
+        region = getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1')
+
+        if not bucket:
+            LOGGER.warning('VIDEOS: Cannot register encoded video — no S3 bucket configured')
+            return
+
+        s3_url = f'https://{bucket}.s3.{region}.amazonaws.com/{root_path}{edx_video_id}'
+
+        profile, _ = Profile.objects.get_or_create(profile_name='desktop_mp4')
+
+        _, created = EncodedVideo.objects.get_or_create(
+            video=video,
+            profile=profile,
+            defaults={
+                'url': s3_url,
+                'file_size': 0,
+                'bitrate': 0,
+            }
+        )
+
+        if created:
+            video.status = 'file_complete'
+            video.save()
+            LOGGER.info('VIDEOS: Auto-registered encoded video for [%s] at [%s]', edx_video_id, s3_url)
+        else:
+            LOGGER.info('VIDEOS: Encoded video already exists for [%s]', edx_video_id)
+
+    except Exception:
+        LOGGER.exception('VIDEOS: Failed to auto-register encoded video for [%s]', edx_video_id)
 
 
 def is_status_update_request(request_data):
