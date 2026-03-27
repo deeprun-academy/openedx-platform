@@ -3,8 +3,8 @@ name: Deeprun Deploy
 on:
   push:
     branches:
-      - deeprun/dev
-      - deeprun/stable
+      - dev
+      - uat
 
   workflow_dispatch:
     inputs:
@@ -42,15 +42,15 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             case "${{ github.event.inputs.environment }}" in
-              dev) echo "tag=dev" >> $GITHUB_OUTPUT; echo "branch=deeprun/dev" >> $GITHUB_OUTPUT ;;
-              uat) echo "tag=uat" >> $GITHUB_OUTPUT; echo "branch=deeprun/stable" >> $GITHUB_OUTPUT ;;
+              dev) echo "tag=dev" >> $GITHUB_OUTPUT; echo "branch=dev" >> $GITHUB_OUTPUT ;;
+              uat) echo "tag=uat" >> $GITHUB_OUTPUT; echo "branch=uat" >> $GITHUB_OUTPUT ;;
             esac
-          elif [[ "${{ github.ref }}" == "refs/heads/deeprun/dev" ]]; then
+          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
             echo "tag=dev" >> $GITHUB_OUTPUT
-            echo "branch=deeprun/dev" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/deeprun/stable" ]]; then
+            echo "branch=dev" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/uat" ]]; then
             echo "tag=uat" >> $GITHUB_OUTPUT
-            echo "branch=deeprun/stable" >> $GITHUB_OUTPUT
+            echo "branch=uat" >> $GITHUB_OUTPUT
           fi
 
       - name: Checkout tutor
@@ -129,9 +129,6 @@ jobs:
           script: |
             source ~/.tutor-venv/bin/activate
 
-            echo "=== Login to GHCR ==="
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u deeprun-academy --password-stdin
-
             echo "=== Pulling image ==="
             docker pull ghcr.io/deeprun-academy/openedx:dev
 
@@ -168,9 +165,6 @@ jobs:
           command_timeout: 10m
           script: |
             source ~/.tutor-venv/bin/activate
-
-            echo "=== Login to GHCR ==="
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u deeprun-academy --password-stdin
 
             echo "=== Pulling image ==="
             docker pull ghcr.io/deeprun-academy/openedx:uat
