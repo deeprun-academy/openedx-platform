@@ -9,7 +9,7 @@ from django.urls import reverse
   <a href="${reverse('about_course', args=[str(course.id)])}">
     <header class="course-image">
       <div class="cover-image">
-        <img src="${course.course_image_url}" alt="${course.display_name_with_default} ${course.display_number_with_default}" />
+        <img src="${course.course_image_url}" alt="${course.display_name_with_default} ${course.display_number_with_default}" onerror="this.src='/static/images/deeprun_course_placeholder.jpg'" />
         <div class="learn-more" aria-hidden="true">${_("LEARN MORE")}</div>
       </div>
     </header>
