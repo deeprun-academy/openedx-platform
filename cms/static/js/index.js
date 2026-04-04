@@ -40,6 +40,33 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
         error: 'error'
     });
 
+    // DeepRun: Save tags to course Advanced Settings after creation
+    var saveDeeprunTags = function(courseUrl, tags) {
+        if (!tags || tags.length === 0) {
+            ViewUtils.redirect(courseUrl);
+            return;
+        }
+        // Extract course key from URL, e.g. "/course/course-v1:org+number+run"
+        var courseKey = courseUrl.replace('/course/', '');
+        $.ajax({
+            url: '/settings/advanced/' + courseKey,
+            type: 'POST',
+            contentType: 'application/json',
+            dataType: 'json',
+            data: JSON.stringify({
+                deeprun_tags: {value: JSON.stringify(tags)}
+            }),
+            headers: {
+                'X-CSRFToken': $.cookie('csrftoken'),
+                'Accept': 'application/json'
+            },
+            complete: function() {
+                // Redirect regardless of success/failure — tags can be set later via Advanced Settings
+                ViewUtils.redirect(courseUrl);
+            }
+        });
+    };
+
     var saveNewCourse = function(e) {
         e.preventDefault();
 
@@ -53,6 +80,10 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
         var number = $newCourseForm.find('.new-course-number').val();
         var run = $newCourseForm.find('.new-course-run').val();
 
+        // DeepRun: Capture tags from the form
+        var tagsRaw = $newCourseForm.find('.new-course-tags').val() || '';
+        var tags = tagsRaw.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t.length > 0; });
+
         var course_info = {
             org: org,
             number: number,
@@ -61,12 +92,22 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
         };
 
         analytics.track('Created a Course', course_info);
-        CreateCourseUtils.create(course_info, function(errorMessage) {
-            var msg = edx.HtmlUtils.joinHtml(edx.HtmlUtils.HTML('<p>'), errorMessage, edx.HtmlUtils.HTML('</p>'));
-            $('.create-course .wrap-error').addClass('is-shown');
-            edx.HtmlUtils.setHtml($('#course_creation_error'), msg);
-            $('.new-course-save').addClass('is-disabled').attr('aria-disabled', true);
-        });
+
+        // DeepRun: Custom create flow — save tags after course creation, then redirect
+        $.postJSON(
+            '/course/',
+            course_info,
+            function(data) {
+                if (data.url !== undefined) {
+                    saveDeeprunTags(data.url, tags);
+                } else if (data.ErrMsg !== undefined) {
+                    var msg = edx.HtmlUtils.joinHtml(edx.HtmlUtils.HTML('<p>'), data.ErrMsg, edx.HtmlUtils.HTML('</p>'));
+                    $('.create-course .wrap-error').addClass('is-shown');
+                    edx.HtmlUtils.setHtml($('#course_creation_error'), msg);
+                    $('.new-course-save').addClass('is-disabled').attr('aria-disabled', true);
+                }
+            }
+        );
     };
 
     var rtlTextDirection = function() {

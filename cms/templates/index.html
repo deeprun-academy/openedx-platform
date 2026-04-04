@@ -95,6 +95,13 @@ from openedx.core.djangolib.js_utils import (
                   <span class="tip tip-error is-hiding" id="tip-error-new-course-org"></span>
                 </li>
 
+                ## DeepRun: Tags field — saved to course Advanced Settings after creation.
+                <li class="field text" id="field-course-tags">
+                  <label for="new-course-tags">${_("Tags")}</label>
+                  <input class="new-course-tags" id="new-course-tags" type="text" name="new-course-tags" placeholder="${_('e.g. Fundamental, Preflop, Advanced')}" aria-describedby="tip-new-course-tags" />
+                  <span class="tip" id="tip-new-course-tags">${_("Comma-separated tags for this course. These will be displayed on the course card.")}</span>
+                </li>
+
                 ## DeepRun: Course Number and Course Run are hidden from users.
                 ## Values are auto-generated via JS below (see deeprun-auto-course-fields).
                 <li class="field text" id="field-course-number" style="display:none">
