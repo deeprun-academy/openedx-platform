@@ -42,6 +42,7 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
 
     // DeepRun: Save extra course metadata (tags + description) after creation
     // Then redirect to Settings & Details so admin can upload images, set schedule, etc.
+    // Uses $.patchJSON (Open edX built-in) to avoid CSRF header issues.
     var saveDeeprunMetadata = function(courseUrl, tags, description, instructorName) {
         var courseKey = courseUrl.replace('/course/', '');
         var settingsUrl = '/settings/details/' + courseKey;
@@ -63,15 +64,11 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
         }
         if (Object.keys(advancedSettings).length > 0) {
             pending++;
-            $.ajax({
-                url: '/api/contentstore/v0/advanced_settings/' + courseKey,
-                type: 'PATCH',
-                contentType: 'application/json',
-                dataType: 'json',
-                data: JSON.stringify(advancedSettings),
-                headers: { 'X-CSRFToken': $.cookie('csrftoken'), 'Accept': 'application/json' },
-                complete: done
-            });
+            $.patchJSON(
+                '/api/contentstore/v0/advanced_settings/' + courseKey,
+                advancedSettings,
+                function() { done(); }
+            ).fail(function() { done(); });
         }
 
         // Save description via Course Details (short_description field)
@@ -81,20 +78,19 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
                 url: '/api/contentstore/v1/course_details/' + courseKey,
                 type: 'GET',
                 dataType: 'json',
-                headers: { 'Accept': 'application/json' },
                 success: function(details) {
                     details.short_description = description;
                     $.ajax({
                         url: '/api/contentstore/v1/course_details/' + courseKey,
                         type: 'PUT',
-                        contentType: 'application/json',
+                        contentType: 'application/json; charset=utf-8',
                         dataType: 'json',
                         data: JSON.stringify(details),
-                        headers: { 'X-CSRFToken': $.cookie('csrftoken'), 'Accept': 'application/json' },
-                        complete: done
+                        success: function() { done(); },
+                        error: function() { done(); }
                     });
                 },
-                error: done
+                error: function() { done(); }
             });
         }
 
