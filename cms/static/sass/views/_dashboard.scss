@@ -635,11 +635,11 @@
 
       // STATE: shown
       &.is-shown {
-        height: ($baseline*26);
+        height: ($baseline*34);
 
         // STATE: errors
         &.has-errors {
-          height: ($baseline*33);
+          height: ($baseline*40);
         }
       }
     }

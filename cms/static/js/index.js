@@ -41,13 +41,15 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
     });
 
     // DeepRun: Save extra course metadata (tags + description) after creation
+    // Then redirect to Settings & Details so admin can upload images, set schedule, etc.
     var saveDeeprunMetadata = function(courseUrl, tags, description) {
         var courseKey = courseUrl.replace('/course/', '');
+        var settingsUrl = '/settings/details/' + courseKey;
         var pending = 0;
         var done = function() {
             pending--;
             if (pending <= 0) {
-                ViewUtils.redirect(courseUrl);
+                ViewUtils.redirect(settingsUrl);
             }
         };
 
@@ -91,7 +93,7 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
 
         // If nothing to save, redirect immediately
         if (pending === 0) {
-            ViewUtils.redirect(courseUrl);
+            ViewUtils.redirect(settingsUrl);
         }
     };
 
