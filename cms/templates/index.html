@@ -102,6 +102,13 @@ from openedx.core.djangolib.js_utils import (
                   <span class="tip" id="tip-new-course-tags">${_("Comma-separated tags for this course. These will be displayed on the course card.")}</span>
                 </li>
 
+                ## DeepRun: Description field — saved to course short_description after creation.
+                <li class="field text" id="field-course-description">
+                  <label for="new-course-description">${_("Description")}</label>
+                  <textarea class="new-course-description" id="new-course-description" name="new-course-description" placeholder="${_('e.g. Learn the fundamentals of poker strategy')}" rows="3" aria-describedby="tip-new-course-description" style="width:100%;resize:vertical"></textarea>
+                  <span class="tip" id="tip-new-course-description">${_("A short description of the course. This will be displayed on the course card.")}</span>
+                </li>
+
                 ## DeepRun: Course Number and Course Run are hidden from users.
                 ## Values are auto-generated via JS below (see deeprun-auto-course-fields).
                 <li class="field text" id="field-course-number" style="display:none">

@@ -40,31 +40,59 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
         error: 'error'
     });
 
-    // DeepRun: Save tags to course Advanced Settings after creation
-    var saveDeeprunTags = function(courseUrl, tags) {
-        if (!tags || tags.length === 0) {
-            ViewUtils.redirect(courseUrl);
-            return;
-        }
-        // Extract course key from URL, e.g. "/course/course-v1:org+number+run"
+    // DeepRun: Save extra course metadata (tags + description) after creation
+    var saveDeeprunMetadata = function(courseUrl, tags, description) {
         var courseKey = courseUrl.replace('/course/', '');
-        $.ajax({
-            url: '/api/contentstore/v0/advanced_settings/' + courseKey,
-            type: 'PATCH',
-            contentType: 'application/json',
-            dataType: 'json',
-            data: JSON.stringify({
-                learning_info: {value: tags}
-            }),
-            headers: {
-                'X-CSRFToken': $.cookie('csrftoken'),
-                'Accept': 'application/json'
-            },
-            complete: function() {
-                // Redirect regardless of success/failure — tags can be set later via Advanced Settings
+        var pending = 0;
+        var done = function() {
+            pending--;
+            if (pending <= 0) {
                 ViewUtils.redirect(courseUrl);
             }
-        });
+        };
+
+        // Save tags via Advanced Settings (learning_info field)
+        if (tags && tags.length > 0) {
+            pending++;
+            $.ajax({
+                url: '/api/contentstore/v0/advanced_settings/' + courseKey,
+                type: 'PATCH',
+                contentType: 'application/json',
+                dataType: 'json',
+                data: JSON.stringify({ learning_info: {value: tags} }),
+                headers: { 'X-CSRFToken': $.cookie('csrftoken'), 'Accept': 'application/json' },
+                complete: done
+            });
+        }
+
+        // Save description via Course Details (short_description field)
+        if (description) {
+            pending++;
+            $.ajax({
+                url: '/api/contentstore/v1/course_details/' + courseKey,
+                type: 'GET',
+                dataType: 'json',
+                headers: { 'Accept': 'application/json' },
+                success: function(details) {
+                    details.short_description = description;
+                    $.ajax({
+                        url: '/api/contentstore/v1/course_details/' + courseKey,
+                        type: 'PUT',
+                        contentType: 'application/json',
+                        dataType: 'json',
+                        data: JSON.stringify(details),
+                        headers: { 'X-CSRFToken': $.cookie('csrftoken'), 'Accept': 'application/json' },
+                        complete: done
+                    });
+                },
+                error: done
+            });
+        }
+
+        // If nothing to save, redirect immediately
+        if (pending === 0) {
+            ViewUtils.redirect(courseUrl);
+        }
     };
 
     var saveNewCourse = function(e) {
@@ -80,9 +108,10 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
         var number = $newCourseForm.find('.new-course-number').val();
         var run = $newCourseForm.find('.new-course-run').val();
 
-        // DeepRun: Capture tags from the form
+        // DeepRun: Capture tags and description from the form
         var tagsRaw = $newCourseForm.find('.new-course-tags').val() || '';
         var tags = tagsRaw.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t.length > 0; });
+        var description = ($newCourseForm.find('.new-course-description').val() || '').trim();
 
         var course_info = {
             org: org,
@@ -93,13 +122,13 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
 
         analytics.track('Created a Course', course_info);
 
-        // DeepRun: Custom create flow — save tags after course creation, then redirect
+        // DeepRun: Custom create flow — save tags + description after course creation, then redirect
         $.postJSON(
             '/course/',
             course_info,
             function(data) {
                 if (data.url !== undefined) {
-                    saveDeeprunTags(data.url, tags);
+                    saveDeeprunMetadata(data.url, tags, description);
                 } else if (data.ErrMsg !== undefined) {
                     var msg = edx.HtmlUtils.joinHtml(edx.HtmlUtils.HTML('<p>'), data.ErrMsg, edx.HtmlUtils.HTML('</p>'));
                     $('.create-course .wrap-error').addClass('is-shown');
