@@ -1,0 +1,33 @@
+# Dockerfile.fast — Fast rebuild for code-only changes
+# Extends the full base image (built weekly via base-image.yml)
+# Only copies updated source code and rebuilds static assets
+# Build time: ~5 min (vs ~20 min for full build)
+
+ARG BASE_IMAGE=ghcr.io/deeprun-academy/openedx-base:latest
+FROM ${BASE_IMAGE}
+
+USER root
+
+# Copy updated source code over the base
+COPY --chown=app:app cms/ /openedx/edx-platform/cms/
+COPY --chown=app:app lms/ /openedx/edx-platform/lms/
+COPY --chown=app:app common/ /openedx/edx-platform/common/
+COPY --chown=app:app openedx/ /openedx/edx-platform/openedx/
+COPY --chown=app:app scripts/ /openedx/edx-platform/scripts/
+COPY --chown=app:app setup.py setup.cfg pyproject.toml /openedx/edx-platform/
+
+# Rebuild static assets
+WORKDIR /openedx/edx-platform
+ENV PATH="/openedx/venv/bin:/openedx/nodeenv/bin:/openedx/bin:${PATH}"
+
+# Re-install edx-platform package (picks up any new entry points)
+RUN pip install -e .
+
+# Compile sass, webpack, and collect static files
+RUN npm run compile-sass -- --skip-themes
+RUN npm run webpack
+RUN ./manage.py lms collectstatic --noinput --settings=tutor.assets \
+    && ./manage.py cms collectstatic --noinput --settings=tutor.assets \
+    && rdfind -makesymlinks true -followsymlinks true /openedx/staticfiles/
+
+USER app

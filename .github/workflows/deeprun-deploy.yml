@@ -16,25 +16,31 @@ on:
         options:
           - dev
           - uat
+      build_mode:
+        description: 'Build mode'
+        required: true
+        default: 'fast'
+        type: choice
+        options:
+          - fast
+          - full
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ghcr.io/deeprun-academy/openedx
+  BASE_IMAGE_NAME: ghcr.io/deeprun-academy/openedx-base
 
 jobs:
   # ─────────────────────────────────────────
-  # Build image in CI and push to GHCR
+  # Determine build strategy
   # ─────────────────────────────────────────
-  build:
-    name: Build & Push Image
+  prepare:
+    name: Prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    permissions:
-      contents: read
-      packages: write
-
     outputs:
-      image_tag: ${{ steps.tag.outputs.tag }}
+      tag: ${{ steps.tag.outputs.tag }}
+      branch: ${{ steps.tag.outputs.branch }}
+      build_mode: ${{ steps.mode.outputs.mode }}
 
     steps:
       - name: Determine tag and branch
@@ -53,6 +59,39 @@ jobs:
             echo "branch=uat" >> $GITHUB_OUTPUT
           fi
 
+      - name: Determine build mode
+        id: mode
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "mode=${{ github.event.inputs.build_mode }}" >> $GITHUB_OUTPUT
+          else
+            # On push: use fast build if base image exists, full otherwise
+            TAG="${{ steps.tag.outputs.tag }}"
+            if docker manifest inspect ${{ env.BASE_IMAGE_NAME }}:${TAG} > /dev/null 2>&1; then
+              echo "mode=fast" >> $GITHUB_OUTPUT
+            else
+              echo "mode=full" >> $GITHUB_OUTPUT
+            fi
+          fi
+        env:
+          DOCKER_CLI_EXPERIMENTAL: enabled
+
+  # ─────────────────────────────────────────
+  # FULL BUILD — Tutor-generated Dockerfile (~20 min)
+  # Builds base image + final image
+  # Run manually or when base image doesn't exist
+  # ─────────────────────────────────────────
+  build-full:
+    name: Full Build
+    needs: prepare
+    if: needs.prepare.outputs.build_mode == 'full'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
       - name: Checkout tutor
         uses: actions/checkout@v4
         with:
@@ -85,8 +124,8 @@ jobs:
       - name: Configure Tutor
         run: |
           tutor config save \
-            --set EDX_PLATFORM_VERSION=${{ steps.tag.outputs.branch }} \
-            --set DOCKER_IMAGE_OPENEDX=${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
+            --set EDX_PLATFORM_VERSION=${{ needs.prepare.outputs.branch }} \
+            --set DOCKER_IMAGE_OPENEDX=${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.tag }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -101,12 +140,54 @@ jobs:
       - name: Build and push image
         timeout-minutes: 40
         run: |
+          TAG="${{ needs.prepare.outputs.tag }}"
           cd $(tutor config printroot)/env/build/openedx
           docker buildx build \
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
-            --tag ${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} \
-            --tag ${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}-${{ github.sha }} \
+            --tag ${{ env.IMAGE_NAME }}:${TAG} \
+            --tag ${{ env.IMAGE_NAME }}:${TAG}-${{ github.sha }} \
+            --tag ${{ env.BASE_IMAGE_NAME }}:${TAG} \
+            --push \
+            .
+
+  # ─────────────────────────────────────────
+  # FAST BUILD — Code-only changes (~5 min)
+  # Extends the base image, copies source + rebuilds assets
+  # ─────────────────────────────────────────
+  build-fast:
+    name: Fast Build
+    needs: prepare
+    if: needs.prepare.outputs.build_mode == 'fast'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push fast image
+        timeout-minutes: 10
+        run: |
+          TAG="${{ needs.prepare.outputs.tag }}"
+          docker buildx build \
+            -f .github/Dockerfile.fast \
+            --build-arg BASE_IMAGE=${{ env.BASE_IMAGE_NAME }}:${TAG} \
+            --tag ${{ env.IMAGE_NAME }}:${TAG} \
+            --tag ${{ env.IMAGE_NAME }}:${TAG}-${{ github.sha }} \
             --push \
             .
 
@@ -115,8 +196,12 @@ jobs:
   # ─────────────────────────────────────────
   deploy-dev:
     name: Deploy to Dev
-    needs: build
-    if: needs.build.outputs.image_tag == 'dev'
+    needs: [prepare, build-full, build-fast]
+    # Run if either build succeeded (the other is skipped)
+    if: |
+      always() &&
+      needs.prepare.outputs.tag == 'dev' &&
+      (needs.build-full.result == 'success' || needs.build-fast.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -152,8 +237,11 @@ jobs:
   # ─────────────────────────────────────────
   deploy-uat:
     name: Deploy to UAT
-    needs: build
-    if: needs.build.outputs.image_tag == 'uat'
+    needs: [prepare, build-full, build-fast]
+    if: |
+      always() &&
+      needs.prepare.outputs.tag == 'uat' &&
+      (needs.build-full.result == 'success' || needs.build-fast.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
