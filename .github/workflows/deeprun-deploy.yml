@@ -103,6 +103,8 @@ jobs:
         run: |
           cd $(tutor config printroot)/env/build/openedx
           docker buildx build \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --tag ${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} \
             --tag ${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}-${{ github.sha }} \
             --push \
