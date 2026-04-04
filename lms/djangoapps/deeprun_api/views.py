@@ -1,10 +1,18 @@
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import DeeprunCourseMeta
 from .serializers import DeeprunCourseMetaSerializer
+
+
+class CsrfExemptSessionAuth(SessionAuthentication):
+    """Session auth without CSRF enforcement (CSRF is handled by Django middleware)."""
+
+    def enforce_csrf(self, request):
+        return
 
 
 @api_view(["GET"])
@@ -17,6 +25,7 @@ def course_meta_list(request):
 
 
 @api_view(["GET", "PUT", "POST"])
+@authentication_classes([CsrfExemptSessionAuth])
 @permission_classes([IsAuthenticated])
 def course_meta_detail(request, course_key):
     """Get or create/update metadata for a specific course."""

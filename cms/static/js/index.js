@@ -58,11 +58,11 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
         if (tags && tags.length > 0) payload.tags = tags;
 
         // Synchronous XHR — blocks until save completes, then redirects
+        // API uses CsrfExemptSessionAuth so no CSRF token needed
         try {
             var xhr = new XMLHttpRequest();
             xhr.open('POST', '/api/deeprun/v1/course-meta/' + courseKey, false);
             xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
-            xhr.setRequestHeader('X-CSRFToken', (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '');
             xhr.send(JSON.stringify(payload));
         } catch (e) {
             // Save failed — continue to redirect anyway
