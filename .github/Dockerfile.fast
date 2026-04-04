@@ -14,7 +14,7 @@ COPY --chown=app:app lms/ /openedx/edx-platform/lms/
 COPY --chown=app:app common/ /openedx/edx-platform/common/
 COPY --chown=app:app openedx/ /openedx/edx-platform/openedx/
 COPY --chown=app:app scripts/ /openedx/edx-platform/scripts/
-COPY --chown=app:app setup.py setup.cfg pyproject.toml /openedx/edx-platform/
+COPY --chown=app:app setup.py setup.cfg /openedx/edx-platform/
 
 # Rebuild static assets
 WORKDIR /openedx/edx-platform
