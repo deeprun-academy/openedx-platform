@@ -49,12 +49,12 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
         // Extract course key from URL, e.g. "/course/course-v1:org+number+run"
         var courseKey = courseUrl.replace('/course/', '');
         $.ajax({
-            url: '/settings/advanced/' + courseKey,
-            type: 'POST',
+            url: '/api/contentstore/v0/advanced_settings/' + courseKey,
+            type: 'PATCH',
             contentType: 'application/json',
             dataType: 'json',
             data: JSON.stringify({
-                deeprun_tags: {value: JSON.stringify(tags)}
+                learning_info: {value: tags}
             }),
             headers: {
                 'X-CSRFToken': $.cookie('csrftoken'),
