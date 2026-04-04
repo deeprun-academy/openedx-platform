@@ -41,6 +41,7 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
     });
 
     // DeepRun: Save course metadata to our custom API, then redirect to Settings & Details.
+    // Uses synchronous XHR to guarantee save completes before redirect.
     var saveDeeprunMetadata = function(courseUrl, tags, description, instructorName) {
         var courseKey = courseUrl.replace('/course/', '');
         var settingsUrl = '/settings/details/' + courseKey;
@@ -56,14 +57,18 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
         if (description) payload.description = description;
         if (tags && tags.length > 0) payload.tags = tags;
 
-        $.postJSON(
-            '/api/deeprun/v1/course-meta/' + courseKey,
-            payload,
-            function() { ViewUtils.redirect(settingsUrl); }
-        ).fail(function() {
-            // Save failed — redirect anyway, metadata can be set later
-            ViewUtils.redirect(settingsUrl);
-        });
+        // Synchronous XHR — blocks until save completes, then redirects
+        try {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/deeprun/v1/course-meta/' + courseKey, false);
+            xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
+            xhr.setRequestHeader('X-CSRFToken', (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '');
+            xhr.send(JSON.stringify(payload));
+        } catch (e) {
+            // Save failed — continue to redirect anyway
+        }
+
+        ViewUtils.redirect(settingsUrl);
     };
 
     var saveNewCourse = function(e) {
