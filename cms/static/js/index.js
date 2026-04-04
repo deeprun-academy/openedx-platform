@@ -42,7 +42,7 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
 
     // DeepRun: Save extra course metadata (tags + description) after creation
     // Then redirect to Settings & Details so admin can upload images, set schedule, etc.
-    var saveDeeprunMetadata = function(courseUrl, tags, description) {
+    var saveDeeprunMetadata = function(courseUrl, tags, description, instructorName) {
         var courseKey = courseUrl.replace('/course/', '');
         var settingsUrl = '/settings/details/' + courseKey;
         var pending = 0;
@@ -53,15 +53,22 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
             }
         };
 
-        // Save tags via Advanced Settings (learning_info field)
+        // Save tags + display_organization via Advanced Settings
+        var advancedSettings = {};
         if (tags && tags.length > 0) {
+            advancedSettings.learning_info = {value: tags};
+        }
+        if (instructorName) {
+            advancedSettings.display_organization = {value: instructorName};
+        }
+        if (Object.keys(advancedSettings).length > 0) {
             pending++;
             $.ajax({
                 url: '/api/contentstore/v0/advanced_settings/' + courseKey,
                 type: 'PATCH',
                 contentType: 'application/json',
                 dataType: 'json',
-                data: JSON.stringify({ learning_info: {value: tags} }),
+                data: JSON.stringify(advancedSettings),
                 headers: { 'X-CSRFToken': $.cookie('csrftoken'), 'Accept': 'application/json' },
                 complete: done
             });
@@ -110,10 +117,11 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
         var number = $newCourseForm.find('.new-course-number').val();
         var run = $newCourseForm.find('.new-course-run').val();
 
-        // DeepRun: Capture tags and description from the form
+        // DeepRun: Capture tags, description, and instructor name from the form
         var tagsRaw = $newCourseForm.find('.new-course-tags').val() || '';
         var tags = tagsRaw.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t.length > 0; });
         var description = ($newCourseForm.find('.new-course-description').val() || '').trim();
+        var instructorName = ($newCourseForm.find('.new-instructor-name').val() || '').trim();
 
         var course_info = {
             org: org,
@@ -130,7 +138,7 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
             course_info,
             function(data) {
                 if (data.url !== undefined) {
-                    saveDeeprunMetadata(data.url, tags, description);
+                    saveDeeprunMetadata(data.url, tags, description, instructorName);
                 } else if (data.ErrMsg !== undefined) {
                     var msg = edx.HtmlUtils.joinHtml(edx.HtmlUtils.HTML('<p>'), data.ErrMsg, edx.HtmlUtils.HTML('</p>'));
                     $('.create-course .wrap-error').addClass('is-shown');

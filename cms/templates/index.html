@@ -77,21 +77,28 @@ from openedx.core.djangolib.js_utils import (
                   <span class="tip" id="tip-new-course-name">${_("The public display name for your course. This cannot be changed, but you can set a different display name in Advanced Settings later.")}</span>
                   <span class="tip tip-error is-hiding" id="tip-error-new-course-name"></span>
                 </li>
-                <li class="field text required">
-                  <label for="new-course-org">${_("Instructor")}</label>
+                ## DeepRun: Friendly instructor name field (visible to user)
+                ## The real org field is hidden below and auto-generated as a URL-safe slug.
+                <li class="field text required" id="field-instructor-name">
+                  <label for="new-instructor-name">${_("Instructor")}</label>
+                  <input class="new-instructor-name" id="new-instructor-name" type="text" name="new-instructor-name" required placeholder="${_('e.g. John Smith')}" aria-describedby="tip-new-instructor-name tip-error-new-instructor-name" />
+                  <span class="tip" id="tip-new-instructor-name">${_("The instructor name for your course.")}</span>
+                  <span class="tip tip-error is-hiding" id="tip-error-new-instructor-name"></span>
+                </li>
+
+                ## DeepRun: Hidden org field — auto-generated from instructor name
+                <li class="field text" id="field-course-org" style="display:none">
+                  <label for="new-course-org">${_("Organization")}</label>
                   % if can_create_organizations:
-                    <input class="new-course-org" id="new-course-org" type="text" name="new-course-org" required placeholder="${_('e.g. John or JaneSmith')}" aria-describedby="tip-new-course-org tip-error-new-course-org" />
+                    <input class="new-course-org" id="new-course-org" type="text" name="new-course-org" placeholder="${_('e.g. org')}" aria-describedby="tip-new-course-org tip-error-new-course-org" />
                   % else:
-                    <select class="new-course-org" id="new-course-org" name="new-course-org" required aria-describedby="tip-new-course-org tip-error-new-course-org">
+                    <select class="new-course-org" id="new-course-org" name="new-course-org" aria-describedby="tip-new-course-org tip-error-new-course-org">
                       % for org in allowed_organizations:
                         <option value="${org}">${org}</option>
                       % endfor
                     </select>
                   % endif
-                  <span class="tip" id="tip-new-course-org">${Text(_("The instructor name for your course. {strong_start}Note: This is part of the course URL, so no spaces or special characters are allowed and it cannot be changed.{strong_end}")).format(
-                      strong_start=HTML('<strong>'),
-                      strong_end=HTML('</strong>'),
-                  )}</span>
+                  <span class="tip" id="tip-new-course-org"></span>
                   <span class="tip tip-error is-hiding" id="tip-error-new-course-org"></span>
                 </li>
 
@@ -667,7 +674,29 @@ from openedx.core.djangolib.js_utils import (
 
         $('#new-course-number').val(slug + '-' + currentShortId).trigger('keyup');
         $('#new-course-run').val(getCurrentRun()).trigger('keyup');
+
+        // Auto-generate org from instructor name
+        var instructorName = $('#new-instructor-name').val() || '';
+        var orgSlug = slugify(instructorName);
+        if (orgSlug) {
+            $('#new-course-org').val(orgSlug).trigger('keyup');
+        }
     }
+
+    // Validate instructor name — show error if empty, enable/disable save button
+    $(document).on('keyup', '#new-instructor-name', function() {
+        var val = $(this).val().trim();
+        var $parent = $(this).parent();
+        var $tip = $parent.find('.tip-error');
+        if (!val) {
+            $parent.addClass('error');
+            $tip.addClass('is-showing').removeClass('is-hiding').text('Required field.');
+        } else {
+            $parent.removeClass('error');
+            $tip.addClass('is-hiding').removeClass('is-showing');
+        }
+        fillHiddenFields();
+    });
 
     // Auto-fill when the "New Course" button is clicked (form becomes visible)
     $(document).on('click', '.new-course-button', function() {
