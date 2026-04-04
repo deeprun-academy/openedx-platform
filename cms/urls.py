@@ -51,6 +51,8 @@ urlpatterns = [
     path('login/', contentstore_views.studio_login_view, name='studio_login'),
     path('signin', contentstore_views.studio_login_view, name='studio_signin'),
 ] + oauth2_urlpatterns + [
+    # Deeprun: course metadata API (shared with LMS)
+    path('', include('lms.djangoapps.deeprun_api.urls')),
     path('', include('openedx.core.djangoapps.user_authn.urls_common')),
     path('', include('common.djangoapps.student.urls')),
     path('transcripts/upload', contentstore_views.upload_transcripts, name='upload_transcripts'),

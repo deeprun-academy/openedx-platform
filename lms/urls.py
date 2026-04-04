@@ -96,6 +96,8 @@ notification_prefs_urls = [
 urlpatterns = [
     # Deeprun: custom login must come before default student URLs
     path('', include('lms.djangoapps.deeprun_auth.urls')),
+    # Deeprun: course metadata API (instructor name, description, tags)
+    path('', include('lms.djangoapps.deeprun_api.urls')),
 
     path('', branding_views.index, name='root'),  # Main marketing page, or redirect to courseware
 

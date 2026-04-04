@@ -40,64 +40,30 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
         error: 'error'
     });
 
-    // DeepRun: Save extra course metadata (tags + description) after creation
-    // Then redirect to Settings & Details so admin can upload images, set schedule, etc.
-    // Uses $.patchJSON (Open edX built-in) to avoid CSRF header issues.
+    // DeepRun: Save course metadata to our custom API, then redirect to Settings & Details.
     var saveDeeprunMetadata = function(courseUrl, tags, description, instructorName) {
         var courseKey = courseUrl.replace('/course/', '');
         var settingsUrl = '/settings/details/' + courseKey;
-        var pending = 0;
-        var done = function() {
-            pending--;
-            if (pending <= 0) {
-                ViewUtils.redirect(settingsUrl);
-            }
-        };
 
-        // Save tags + display_organization via Advanced Settings
-        var advancedSettings = {};
-        if (tags && tags.length > 0) {
-            advancedSettings.learning_info = {value: tags};
-        }
-        if (instructorName) {
-            advancedSettings.display_organization = {value: instructorName};
-        }
-        if (Object.keys(advancedSettings).length > 0) {
-            pending++;
-            $.patchJSON(
-                '/api/contentstore/v0/advanced_settings/' + courseKey,
-                advancedSettings,
-                function() { done(); }
-            ).fail(function() { done(); });
-        }
-
-        // Save description via Course Details (short_description field)
-        if (description) {
-            pending++;
-            $.ajax({
-                url: '/api/contentstore/v1/course_details/' + courseKey,
-                type: 'GET',
-                dataType: 'json',
-                success: function(details) {
-                    details.short_description = description;
-                    $.ajax({
-                        url: '/api/contentstore/v1/course_details/' + courseKey,
-                        type: 'PUT',
-                        contentType: 'application/json; charset=utf-8',
-                        dataType: 'json',
-                        data: JSON.stringify(details),
-                        success: function() { done(); },
-                        error: function() { done(); }
-                    });
-                },
-                error: function() { done(); }
-            });
-        }
-
-        // If nothing to save, redirect immediately
-        if (pending === 0) {
+        // Nothing to save — redirect immediately
+        if (!instructorName && !description && (!tags || tags.length === 0)) {
             ViewUtils.redirect(settingsUrl);
+            return;
         }
+
+        var payload = { course_key: courseKey };
+        if (instructorName) payload.instructor_name = instructorName;
+        if (description) payload.description = description;
+        if (tags && tags.length > 0) payload.tags = tags;
+
+        $.postJSON(
+            '/api/deeprun/v1/course-meta/' + courseKey,
+            payload,
+            function() { ViewUtils.redirect(settingsUrl); }
+        ).fail(function() {
+            // Save failed — redirect anyway, metadata can be set later
+            ViewUtils.redirect(settingsUrl);
+        });
     };
 
     var saveNewCourse = function(e) {
