@@ -78,11 +78,9 @@ from openedx.core.djangolib.js_utils import (
                   <span class="tip tip-error is-hiding" id="tip-error-new-course-name"></span>
                 </li>
                 <li class="field text required">
-                  <label for="new-course-org">${_("Organization")}</label>
-                  ## Translators: This is an example for the name of the organization sponsoring a course, seen when filling out the form to create a new course. The organization name cannot contain spaces.
-                  ## Translators: "e.g. UniversityX or OrganizationX" is a placeholder displayed when user put no data into this field.
+                  <label for="new-course-org">${_("Instructor")}</label>
                   % if can_create_organizations:
-                    <input class="new-course-org" id="new-course-org" type="text" name="new-course-org" required placeholder="${_('e.g. UniversityX or OrganizationX')}" aria-describedby="tip-new-course-org tip-error-new-course-org" />
+                    <input class="new-course-org" id="new-course-org" type="text" name="new-course-org" required placeholder="${_('e.g. John or JaneSmith')}" aria-describedby="tip-new-course-org tip-error-new-course-org" />
                   % else:
                     <select class="new-course-org" id="new-course-org" name="new-course-org" required aria-describedby="tip-new-course-org tip-error-new-course-org">
                       % for org in allowed_organizations:
@@ -90,7 +88,7 @@ from openedx.core.djangolib.js_utils import (
                       % endfor
                     </select>
                   % endif
-                  <span class="tip" id="tip-new-course-org">${Text(_("The name of the organization sponsoring the course. {strong_start}Note: The organization name is part of the course URL.{strong_end} This cannot be changed, but you can set a different display name in Advanced Settings later.")).format(
+                  <span class="tip" id="tip-new-course-org">${Text(_("The instructor name for your course. {strong_start}Note: This is part of the course URL, so no spaces or special characters are allowed and it cannot be changed.{strong_end}")).format(
                       strong_start=HTML('<strong>'),
                       strong_end=HTML('</strong>'),
                   )}</span>
