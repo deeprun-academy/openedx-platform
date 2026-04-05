@@ -1310,3 +1310,49 @@
     }
   }
 }
+
+// ====================
+// DeepRun: Simplify Schedule & Details page
+// Hide sections that aren't used in our workflow.
+// See issues/004-simplify-course-schedule-details-page.md
+// ====================
+.view-settings {
+  // Hide Course Pacing section (all courses default to self-paced)
+  .group-settings.pacing,
+  // Hide Course Schedule section (start/end/enrollment dates)
+  #schedule,
+  // Hide "Introducing Your Course" marketing fields — redundant with our create form
+  #field-course-title,
+  #field-course-subtitle,
+  #field-course-duration,
+  #field-course-description,
+  #field-course-short-description,
+  // Hide Course Overview (large HTML block) and sidebar HTML
+  #field-course-overview,
+  #field-course-about-sidebar-html,
+  // Hide Banner + Video Thumbnail images (only Course Card Image is used)
+  #field-banner-image,
+  #field-video-thumbnail-image,
+  // Hide Course Introduction Video
+  #field-course-introduction-video,
+  // Hide Learning Outcomes, Instructors (we track these in DeeprunCourseMeta), Requirements
+  .group-settings.course-learning-info,
+  .group-settings.instructor-types,
+  .group-settings.requirements {
+    display: none !important;
+  }
+
+  // Hide section headers for the marketing group when only our fields remain
+  .group-settings.marketing > header {
+    display: none;
+  }
+
+  // Hide orphan <hr> dividers that would leave gaps where sections were removed
+  .group-settings.pacing + hr.divide,
+  #schedule + hr.divide,
+  .group-settings.course-learning-info + hr.divide,
+  .group-settings.instructor-types + hr.divide,
+  .group-settings.requirements + hr.divide {
+    display: none;
+  }
+}
