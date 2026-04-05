@@ -20,6 +20,12 @@ class DeeprunCourseMeta(models.Model):
         default="",
         help_text="Display name for the instructor (e.g. 'Rick Astley')",
     )
+    instructor_avatar_url = models.CharField(
+        max_length=1024,
+        blank=True,
+        default="",
+        help_text="URL to the instructor's photo (e.g. Open edX asset URL or external image)",
+    )
     description = models.TextField(
         blank=True,
         default="",

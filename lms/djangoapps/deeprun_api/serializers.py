@@ -6,5 +6,5 @@ from .models import DeeprunCourseMeta
 class DeeprunCourseMetaSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeeprunCourseMeta
-        fields = ["course_key", "instructor_name", "description", "tags", "updated_at"]
+        fields = ["course_key", "instructor_name", "instructor_avatar_url", "description", "tags", "updated_at"]
         read_only_fields = ["updated_at"]
