@@ -6,10 +6,31 @@ import React from 'react';
 // eslint-disable-next-line no-unused-vars
 import ReactDOM from 'react-dom';
 
+// DeepRun: Delete a course via our custom API, then reload to refresh the list.
+function handleDeleteCourse(courseKey, displayName) {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(gettext('Delete course "') + displayName + gettext('"? This cannot be undone.'))) {
+        return;
+    }
+    const xhr = new XMLHttpRequest();
+    xhr.open('DELETE', '/api/deeprun/v1/course/' + courseKey, true);
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            window.location.reload();
+        } else {
+            // eslint-disable-next-line no-alert
+            window.alert(gettext('Failed to delete course: ') + xhr.status + ' ' + xhr.responseText);
+        }
+    };
+    xhr.onerror = function() {
+        // eslint-disable-next-line no-alert
+        window.alert(gettext('Network error while deleting course.'));
+    };
+    xhr.send();
+}
+
 // eslint-disable-next-line import/prefer-default-export
 export function CourseOrLibraryListing(props) {
-    // eslint-disable-next-line prefer-destructuring
-    const allowReruns = props.allowReruns;
     // eslint-disable-next-line prefer-destructuring
     const linkClass = props.linkClass;
     // eslint-disable-next-line prefer-destructuring
@@ -52,30 +73,18 @@ export function CourseOrLibraryListing(props) {
                                 </a>
                             )
                             : renderCourseMetadata(item, i)}
-                        { item.lms_link && item.rerun_link
+                        { item.course_key
               && (
                   <ul className="item-actions course-actions">
-                      { allowReruns
-                && (
-                    <li className="action action-rerun">
-                        <a
-                            href={item.rerun_link}
-                            className="button rerun-button"
-                            aria-labelledby={`re-run-${idBase}-${i} title-${idBase}-${i}`}
-                            id={`re-run-${idBase}-${i}`}
-                        >{gettext('Re-run Course')}
-                        </a>
-                    </li>
-                )}
-                      <li className="action action-view">
-                          <a
-                              href={item.lms_link}
-                              rel="external"
-                              className="button view-button"
-                              aria-labelledby={`view-live-${idBase}-${i} title-${idBase}-${i}`}
-                              id={`view-live-${idBase}-${i}`}
-                          >{gettext('View Live')}
-                          </a>
+                      <li className="action action-delete">
+                          <button
+                              type="button"
+                              className="button delete-button"
+                              aria-labelledby={`delete-${idBase}-${i} title-${idBase}-${i}`}
+                              id={`delete-${idBase}-${i}`}
+                              onClick={() => handleDeleteCourse(item.course_key, item.display_name)}
+                          >{gettext('Delete')}
+                          </button>
                       </li>
                   </ul>
               )}
