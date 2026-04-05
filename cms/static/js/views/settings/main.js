@@ -470,6 +470,7 @@ function(ValidatingView, CodeMirror, _, $, ui, DateUtils, FileUploadModel,
 
             // DeepRun: Instructor photo — saves to DeeprunCourseMeta API (not CourseDetails)
             if (event.currentTarget.id === 'upload-deeprun-instructor-photo') {
+                console.log('[DeepRun] Instructor photo upload clicked');
                 var deeprunUpload = new FileUploadModel({
                     title: gettext('Upload instructor photo.'),
                     message: gettext('Files must be in JPEG or PNG format.'),
@@ -478,20 +479,31 @@ function(ValidatingView, CodeMirror, _, $, ui, DateUtils, FileUploadModel,
                 var deeprunModal = new FileUploadDialog({
                     model: deeprunUpload,
                     onSuccess: function(response) {
-                        var assetUrl = response.asset.url;
+                        console.log('[DeepRun] Upload success, response:', response);
+                        var assetUrl = response && response.asset && response.asset.url;
+                        if (!assetUrl) {
+                            console.error('[DeepRun] No asset URL in response:', response);
+                            alert('Upload succeeded but could not get asset URL. Check console.');
+                            return;
+                        }
                         var courseKey = window.location.pathname.replace('/settings/details/', '');
-                        // Save URL to DeeprunCourseMeta
+                        console.log('[DeepRun] Saving to course-meta API, courseKey:', courseKey, 'assetUrl:', assetUrl);
                         $.ajax({
                             url: '/api/deeprun/v1/course-meta/' + courseKey,
                             type: 'POST',
                             contentType: 'application/json; charset=utf-8',
                             data: JSON.stringify({ instructor_avatar_url: assetUrl }),
-                            success: function() {
+                            success: function(data) {
+                                console.log('[DeepRun] Save success:', data);
                                 $('#deeprun-instructor-photo-preview')
                                     .attr('src', assetUrl)
                                     .removeClass('placeholder')
                                     .show();
                                 $('#deeprun-instructor-photo-empty-msg').hide();
+                            },
+                            error: function(xhr, status, err) {
+                                console.error('[DeepRun] Save failed:', xhr.status, xhr.responseText, err);
+                                alert('Upload succeeded but saving to database failed: ' + xhr.status + ' ' + xhr.responseText);
                             }
                         });
                     }
