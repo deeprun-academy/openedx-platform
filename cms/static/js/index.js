@@ -42,19 +42,18 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
 
     // DeepRun: Save course metadata to our custom API, then redirect to Settings & Details.
     // Uses synchronous XHR to guarantee save completes before redirect.
-    var saveDeeprunMetadata = function(courseUrl, tags, description, instructorName, instructorAvatarUrl) {
+    var saveDeeprunMetadata = function(courseUrl, tags, description, instructorName) {
         var courseKey = courseUrl.replace('/course/', '');
         var settingsUrl = '/settings/details/' + courseKey;
 
         // Nothing to save — redirect immediately
-        if (!instructorName && !description && !instructorAvatarUrl && (!tags || tags.length === 0)) {
+        if (!instructorName && !description && (!tags || tags.length === 0)) {
             ViewUtils.redirect(settingsUrl);
             return;
         }
 
         var payload = { course_key: courseKey };
         if (instructorName) payload.instructor_name = instructorName;
-        if (instructorAvatarUrl) payload.instructor_avatar_url = instructorAvatarUrl;
         if (description) payload.description = description;
         if (tags && tags.length > 0) payload.tags = tags;
 
@@ -85,12 +84,11 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
         var number = $newCourseForm.find('.new-course-number').val();
         var run = $newCourseForm.find('.new-course-run').val();
 
-        // DeepRun: Capture tags, description, instructor name, and instructor avatar from the form
+        // DeepRun: Capture tags, description, and instructor name from the form
         var tagsRaw = $newCourseForm.find('.new-course-tags').val() || '';
         var tags = tagsRaw.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t.length > 0; });
         var description = ($newCourseForm.find('.new-course-description').val() || '').trim();
         var instructorName = ($newCourseForm.find('.new-instructor-name').val() || '').trim();
-        var instructorAvatarUrl = ($newCourseForm.find('.new-instructor-avatar').val() || '').trim();
 
         var course_info = {
             org: org,
@@ -107,7 +105,7 @@ function(domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibrary
             course_info,
             function(data) {
                 if (data.url !== undefined) {
-                    saveDeeprunMetadata(data.url, tags, description, instructorName, instructorAvatarUrl);
+                    saveDeeprunMetadata(data.url, tags, description, instructorName);
                 } else if (data.ErrMsg !== undefined) {
                     var msg = edx.HtmlUtils.joinHtml(edx.HtmlUtils.HTML('<p>'), data.ErrMsg, edx.HtmlUtils.HTML('</p>'));
                     $('.create-course .wrap-error').addClass('is-shown');

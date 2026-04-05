@@ -48,6 +48,23 @@ function(ValidatingView, CodeMirror, _, $, ui, DateUtils, FileUploadModel,
             this.listenTo(this.model, 'invalid', this.handleValidationError);
             this.listenTo(this.model, 'change', this.showNotificationBar);
             this.selectorToField = _.invert(this.fieldToSelectorMap);
+
+            // DeepRun: Load current instructor photo from DeeprunCourseMeta API
+            var courseKey = window.location.pathname.replace('/settings/details/', '');
+            $.ajax({
+                url: '/api/deeprun/v1/course-meta/' + courseKey,
+                type: 'GET',
+                dataType: 'json',
+                success: function(meta) {
+                    if (meta && meta.instructor_avatar_url) {
+                        $('#deeprun-instructor-photo-preview')
+                            .attr('src', meta.instructor_avatar_url)
+                            .removeClass('placeholder')
+                            .show();
+                        $('#deeprun-instructor-photo-empty-msg').hide();
+                    }
+                }
+            });
             // handle license separately, to avoid reimplementing view logic
             this.licenseModel = new LicenseModel({asString: this.model.get('license')});
             this.licenseView = new LicenseView({
@@ -450,6 +467,39 @@ function(ValidatingView, CodeMirror, _, $, ui, DateUtils, FileUploadModel,
 
         uploadImage: function(event) {
             event.preventDefault();
+
+            // DeepRun: Instructor photo — saves to DeeprunCourseMeta API (not CourseDetails)
+            if (event.currentTarget.id === 'upload-deeprun-instructor-photo') {
+                var deeprunUpload = new FileUploadModel({
+                    title: gettext('Upload instructor photo.'),
+                    message: gettext('Files must be in JPEG or PNG format.'),
+                    mimeTypes: ['image/jpeg', 'image/png']
+                });
+                var deeprunModal = new FileUploadDialog({
+                    model: deeprunUpload,
+                    onSuccess: function(response) {
+                        var assetUrl = response.asset.url;
+                        var courseKey = window.location.pathname.replace('/settings/details/', '');
+                        // Save URL to DeeprunCourseMeta
+                        $.ajax({
+                            url: '/api/deeprun/v1/course-meta/' + courseKey,
+                            type: 'POST',
+                            contentType: 'application/json; charset=utf-8',
+                            data: JSON.stringify({ instructor_avatar_url: assetUrl }),
+                            success: function() {
+                                $('#deeprun-instructor-photo-preview')
+                                    .attr('src', assetUrl)
+                                    .removeClass('placeholder')
+                                    .show();
+                                $('#deeprun-instructor-photo-empty-msg').hide();
+                            }
+                        });
+                    }
+                });
+                deeprunModal.show();
+                return;
+            }
+
             var title = '',
                 selector = '',
                 image_key = '',

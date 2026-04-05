@@ -450,6 +450,21 @@ CMS.URL.UPLOAD_ASSET = '${upload_asset_url | n, js_escaped_string}'
                   % endif
                 % endif
 
+                ## DeepRun: Instructor photo section (saved to DeeprunCourseMeta)
+                <li class="field image" id="field-deeprun-instructor-photo">
+                  <label>${_("Instructor Photo")}</label>
+                  <div class="current current-course-image">
+                    <span class="wrapper-course-image">
+                      <img class="course-image placeholder" id="deeprun-instructor-photo-preview" src="${static.url('images/placeholder-profile.png') if False else ''}" alt="${_('Instructor Photo')}" style="max-width:200px;max-height:200px;object-fit:cover;border-radius:50%;"/>
+                    </span>
+                    <span class="msg msg-empty" id="deeprun-instructor-photo-empty-msg">${_("No instructor photo uploaded yet.")}</span>
+                  </div>
+
+                  <div class="wrapper-input">
+                    <button type="button" class="action action-upload-image" id="upload-deeprun-instructor-photo">${_("Upload Instructor Photo")}</button>
+                  </div>
+                </li>
+
                 % if about_page_editable:
                 <li class="field image" id="field-course-image">
                   <label for="course-image-url">${_("Course Card Image")}</label>

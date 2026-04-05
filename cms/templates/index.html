@@ -109,13 +109,6 @@ from openedx.core.djangolib.js_utils import (
                   <span class="tip" id="tip-new-course-tags">${_("Comma-separated tags for this course. These will be displayed on the course card.")}</span>
                 </li>
 
-                ## DeepRun: Instructor photo URL — saved to DeeprunCourseMeta after creation.
-                <li class="field text" id="field-instructor-avatar">
-                  <label for="new-instructor-avatar">${_("Instructor Photo URL")}</label>
-                  <input class="new-instructor-avatar" id="new-instructor-avatar" type="text" name="new-instructor-avatar" placeholder="${_('https://... or /asset-v1:...')}" aria-describedby="tip-new-instructor-avatar" />
-                  <span class="tip" id="tip-new-instructor-avatar">${_("Optional. Upload a photo via Files &amp; Uploads page first, then paste the URL here.")}</span>
-                </li>
-
                 ## DeepRun: Description field — saved to course short_description after creation.
                 <li class="field text" id="field-course-description">
                   <label for="new-course-description">${_("Description")}</label>
