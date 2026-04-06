@@ -49,14 +49,26 @@ function(ValidatingView, CodeMirror, _, $, ui, DateUtils, FileUploadModel,
             this.listenTo(this.model, 'change', this.showNotificationBar);
             this.selectorToField = _.invert(this.fieldToSelectorMap);
 
-            // DeepRun: Load current instructor photo from DeeprunCourseMeta API
-            var courseKey = window.location.pathname.replace('/settings/details/', '');
+            // DeepRun: Load all metadata from DeeprunCourseMeta API
+            var deeprunCourseKey = window.location.pathname.replace('/settings/details/', '');
+            var deeprunSaveTimer = null;
+
             $.ajax({
-                url: '/api/deeprun/v1/course-meta/' + courseKey,
+                url: '/api/deeprun/v1/course-meta/' + deeprunCourseKey,
                 type: 'GET',
                 dataType: 'json',
                 success: function(meta) {
-                    if (meta && meta.instructor_avatar_url) {
+                    if (!meta) return;
+                    if (meta.instructor_name) {
+                        $('#deeprun-instructor-name').val(meta.instructor_name);
+                    }
+                    if (meta.description) {
+                        $('#deeprun-description').val(meta.description);
+                    }
+                    if (meta.tags && meta.tags.length > 0) {
+                        $('#deeprun-tags').val(meta.tags.join(', '));
+                    }
+                    if (meta.instructor_avatar_url) {
                         $('#deeprun-instructor-photo-preview')
                             .attr('src', meta.instructor_avatar_url)
                             .removeClass('placeholder')
@@ -64,6 +76,28 @@ function(ValidatingView, CodeMirror, _, $, ui, DateUtils, FileUploadModel,
                         $('#deeprun-instructor-photo-empty-msg').hide();
                     }
                 }
+            });
+
+            // DeepRun: Auto-save metadata fields on change (debounced 1s)
+            function deeprunSaveMeta() {
+                var tagsRaw = $('#deeprun-tags').val() || '';
+                var tags = tagsRaw.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t.length > 0; });
+                var payload = {
+                    instructor_name: ($('#deeprun-instructor-name').val() || '').trim(),
+                    description: ($('#deeprun-description').val() || '').trim(),
+                    tags: tags
+                };
+                $.ajax({
+                    url: '/api/deeprun/v1/course-meta/' + deeprunCourseKey,
+                    type: 'POST',
+                    contentType: 'application/json; charset=utf-8',
+                    data: JSON.stringify(payload)
+                });
+            }
+
+            $(document).on('input', '#deeprun-instructor-name, #deeprun-description, #deeprun-tags', function() {
+                clearTimeout(deeprunSaveTimer);
+                deeprunSaveTimer = setTimeout(deeprunSaveMeta, 1000);
             });
             // handle license separately, to avoid reimplementing view logic
             this.licenseModel = new LicenseModel({asString: this.model.get('license')});

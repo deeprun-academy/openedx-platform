@@ -450,6 +450,25 @@ CMS.URL.UPLOAD_ASSET = '${upload_asset_url | n, js_escaped_string}'
                   % endif
                 % endif
 
+                ## DeepRun: Editable metadata fields (saved to DeeprunCourseMeta)
+                <li class="field text" id="field-deeprun-instructor-name">
+                  <label for="deeprun-instructor-name">${_("Instructor Name")}</label>
+                  <input type="text" class="long" id="deeprun-instructor-name" placeholder="${_('e.g. Rick Astley')}" />
+                  <span class="tip tip-stacked">${_("The instructor's display name shown on the course card.")}</span>
+                </li>
+
+                <li class="field text" id="field-deeprun-description">
+                  <label for="deeprun-description">${_("Course Description")}</label>
+                  <textarea class="text" id="deeprun-description" rows="3" placeholder="${_('e.g. Learn the fundamentals of...')}"></textarea>
+                  <span class="tip tip-stacked">${_("Short description shown on the course card.")}</span>
+                </li>
+
+                <li class="field text" id="field-deeprun-tags">
+                  <label for="deeprun-tags">${_("Tags")}</label>
+                  <input type="text" class="long" id="deeprun-tags" placeholder="${_('e.g. Fundamental, Preflop, Advanced')}" />
+                  <span class="tip tip-stacked">${_("Comma-separated tags displayed on the course card.")}</span>
+                </li>
+
                 ## DeepRun: Instructor photo section (saved to DeeprunCourseMeta)
                 <li class="field image" id="field-deeprun-instructor-photo">
                   <label>${_("Instructor Photo")}</label>
