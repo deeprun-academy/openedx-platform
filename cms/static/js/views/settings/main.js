@@ -78,7 +78,17 @@ function(ValidatingView, CodeMirror, _, $, ui, DateUtils, FileUploadModel,
                 }
             });
 
-            // DeepRun: Auto-save metadata fields on change (debounced 1s)
+            // DeepRun: Auto-save metadata fields on change (debounced 1s) with status indicator
+            function deeprunShowStatus(msg, isError) {
+                var $el = $('#deeprun-save-status');
+                $el.text(msg)
+                    .css('color', isError ? '#e80000' : '#2d9b2d')
+                    .stop(true).fadeIn(100);
+                if (!isError) {
+                    setTimeout(function() { $el.fadeOut(1500); }, 2000);
+                }
+            }
+
             function deeprunSaveMeta() {
                 var tagsRaw = $('#deeprun-tags').val() || '';
                 var tags = tagsRaw.split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t.length > 0; });
@@ -87,11 +97,14 @@ function(ValidatingView, CodeMirror, _, $, ui, DateUtils, FileUploadModel,
                     description: ($('#deeprun-description').val() || '').trim(),
                     tags: tags
                 };
+                deeprunShowStatus('Saving...', false);
                 $.ajax({
                     url: '/api/deeprun/v1/course-meta/' + deeprunCourseKey,
                     type: 'POST',
                     contentType: 'application/json; charset=utf-8',
-                    data: JSON.stringify(payload)
+                    data: JSON.stringify(payload),
+                    success: function() { deeprunShowStatus('Saved', false); },
+                    error: function() { deeprunShowStatus('Failed to save', true); }
                 });
             }
 

@@ -451,6 +451,7 @@ CMS.URL.UPLOAD_ASSET = '${upload_asset_url | n, js_escaped_string}'
                 % endif
 
                 ## DeepRun: Editable metadata fields (saved to DeeprunCourseMeta)
+                <span id="deeprun-save-status" style="display:none;font-size:12px;font-weight:600;margin-left:4px;"></span>
                 <li class="field text" id="field-deeprun-instructor-name">
                   <label for="deeprun-instructor-name">${_("Instructor Name")}</label>
                   <input type="text" class="long" id="deeprun-instructor-name" placeholder="${_('e.g. Rick Astley')}" />
