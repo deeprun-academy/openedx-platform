@@ -83,7 +83,24 @@ export function CourseOrLibraryListing(props) {
                               aria-labelledby={`delete-${idBase}-${i} title-${idBase}-${i}`}
                               id={`delete-${idBase}-${i}`}
                               onClick={() => handleDeleteCourse(item.course_key, item.display_name)}
-                          >{gettext('Delete')}
+                              style={{
+                                  backgroundColor: '#2d2d5e',
+                                  color: '#fff',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  padding: '8px 16px',
+                                  fontSize: '14px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                              }}
+                          >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6" />
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                              {gettext('Delete')}
                           </button>
                       </li>
                   </ul>
