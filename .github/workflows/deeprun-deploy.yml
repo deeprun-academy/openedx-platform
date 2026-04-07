@@ -219,6 +219,10 @@ jobs:
             echo "=== Cleaning up unused images ==="
             docker image prune -af --filter "until=1h" || true
 
+            echo "=== Updating Tutor plugin ==="
+            PLUGIN_ROOT=$(tutor plugins printroot)
+            curl -sL "https://raw.githubusercontent.com/deeprun-academy/tutor-config/main/plugins/deeprun.py" -o "$PLUGIN_ROOT/deeprun.py"
+
             echo "=== Pulling image ==="
             docker pull ghcr.io/deeprun-academy/openedx:dev
 
@@ -261,6 +265,10 @@ jobs:
 
             echo "=== Cleaning up unused images ==="
             docker image prune -af --filter "until=1h" || true
+
+            echo "=== Updating Tutor plugin ==="
+            PLUGIN_ROOT=$(tutor plugins printroot)
+            curl -sL "https://raw.githubusercontent.com/deeprun-academy/tutor-config/main/plugins/deeprun.py" -o "$PLUGIN_ROOT/deeprun.py"
 
             echo "=== Pulling image ==="
             docker pull ghcr.io/deeprun-academy/openedx:uat
