@@ -54,7 +54,6 @@ def course_meta_detail(request, course_key):
 
 
 @api_view(["POST"])
-@authentication_classes([CsrfExemptSessionAuth])
 @permission_classes([IsAuthenticated])
 def progress_upsert(request):
     """
