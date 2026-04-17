@@ -92,13 +92,6 @@ jobs:
       packages: write
 
     steps:
-      - name: Checkout tutor
-        uses: actions/checkout@v4
-        with:
-          repository: deeprun-academy/tutor
-          ref: tutor-v20
-          path: tutor
-
       - name: Checkout tutor-config
         uses: actions/checkout@v4
         with:
@@ -112,7 +105,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Tutor
-        run: pip install -e ./tutor
+        run: pip install tutor==20.0.5
 
       - name: Install deeprun plugin
         run: |
