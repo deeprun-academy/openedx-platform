@@ -5,6 +5,7 @@ on:
     branches:
       - dev
       - uat
+      - prod
 
   workflow_dispatch:
     inputs:
@@ -16,6 +17,7 @@ on:
         options:
           - dev
           - uat
+          - prod
       build_mode:
         description: 'Build mode'
         required: true
@@ -48,8 +50,9 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             case "${{ github.event.inputs.environment }}" in
-              dev) echo "tag=dev" >> $GITHUB_OUTPUT; echo "branch=dev" >> $GITHUB_OUTPUT ;;
-              uat) echo "tag=uat" >> $GITHUB_OUTPUT; echo "branch=uat" >> $GITHUB_OUTPUT ;;
+              dev)  echo "tag=dev"  >> $GITHUB_OUTPUT; echo "branch=dev"  >> $GITHUB_OUTPUT ;;
+              uat)  echo "tag=uat"  >> $GITHUB_OUTPUT; echo "branch=uat"  >> $GITHUB_OUTPUT ;;
+              prod) echo "tag=prod" >> $GITHUB_OUTPUT; echo "branch=prod" >> $GITHUB_OUTPUT ;;
             esac
           elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
             echo "tag=dev" >> $GITHUB_OUTPUT
@@ -57,6 +60,9 @@ jobs:
           elif [[ "${{ github.ref }}" == "refs/heads/uat" ]]; then
             echo "tag=uat" >> $GITHUB_OUTPUT
             echo "branch=uat" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
+            echo "tag=prod" >> $GITHUB_OUTPUT
+            echo "branch=prod" >> $GITHUB_OUTPUT
           fi
 
       - name: Determine build mode
@@ -197,24 +203,21 @@ jobs:
       (needs.build-full.result == 'success' || needs.build-fast.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment: dev
 
     steps:
       - name: Deploy to dev server
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.DEV_SERVER_IP }}
-          username: ubuntu
-          key: ${{ secrets.DEV_SSH_KEY }}
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
           command_timeout: 10m
           script: |
             source ~/.tutor-venv/bin/activate
 
             echo "=== Cleaning up unused images ==="
             docker image prune -af --filter "until=1h" || true
-
-            echo "=== Updating Tutor plugin ==="
-            PLUGIN_ROOT=$(tutor plugins printroot)
-            curl -sL "https://raw.githubusercontent.com/deeprun-academy/tutor-config/main/plugins/deeprun.py" -o "$PLUGIN_ROOT/deeprun.py"
 
             echo "=== Pulling image ==="
             docker pull ghcr.io/deeprun-academy/openedx:dev
@@ -224,7 +227,7 @@ jobs:
               --set DOCKER_IMAGE_OPENEDX=ghcr.io/deeprun-academy/openedx:dev
 
             echo "=== Restarting ==="
-            docker compose -f ~/.local/share/tutor/env/local/docker-compose.yml -f ~/.local/share/tutor/env/local/docker-compose.prod.yml --project-name tutor_local up --remove-orphans -d
+            docker compose -f ~/.local/share/tutor/env/local/docker-compose.yml -f ~/.local/share/tutor/env/local/docker-compose.prod.yml --project-name tutor_local up -d lms cms lms-worker cms-worker
 
             echo "=== Running migrations ==="
             tutor local run lms ./manage.py lms migrate --noinput
@@ -244,24 +247,21 @@ jobs:
       (needs.build-full.result == 'success' || needs.build-fast.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment: uat
 
     steps:
       - name: Deploy to UAT server
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.UAT_SERVER_IP }}
-          username: ubuntu
-          key: ${{ secrets.UAT_SSH_KEY }}
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
           command_timeout: 10m
           script: |
             source ~/.tutor-venv/bin/activate
 
             echo "=== Cleaning up unused images ==="
             docker image prune -af --filter "until=1h" || true
-
-            echo "=== Updating Tutor plugin ==="
-            PLUGIN_ROOT=$(tutor plugins printroot)
-            curl -sL "https://raw.githubusercontent.com/deeprun-academy/tutor-config/main/plugins/deeprun.py" -o "$PLUGIN_ROOT/deeprun.py"
 
             echo "=== Pulling image ==="
             docker pull ghcr.io/deeprun-academy/openedx:uat
@@ -271,10 +271,54 @@ jobs:
               --set DOCKER_IMAGE_OPENEDX=ghcr.io/deeprun-academy/openedx:uat
 
             echo "=== Restarting ==="
-            docker compose -f ~/.local/share/tutor/env/local/docker-compose.yml -f ~/.local/share/tutor/env/local/docker-compose.prod.yml --project-name tutor_local up --remove-orphans -d
+            docker compose -f ~/.local/share/tutor/env/local/docker-compose.yml -f ~/.local/share/tutor/env/local/docker-compose.prod.yml --project-name tutor_local up -d lms cms lms-worker cms-worker
 
             echo "=== Running migrations ==="
             tutor local run lms ./manage.py lms migrate --noinput
             tutor local run cms ./manage.py cms migrate --noinput
 
             echo "=== UAT deploy complete ==="
+
+  # ─────────────────────────────────────────
+  # Deploy to Prod
+  # ─────────────────────────────────────────
+  deploy-prod:
+    name: Deploy to Prod
+    needs: [prepare, build-full, build-fast]
+    if: |
+      always() &&
+      needs.prepare.outputs.tag == 'prod' &&
+      (needs.build-full.result == 'success' || needs.build-fast.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: prod
+
+    steps:
+      - name: Deploy to Prod server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            source ~/.tutor-venv/bin/activate
+
+            echo "=== Cleaning up unused images ==="
+            docker image prune -af --filter "until=1h" || true
+
+            echo "=== Pulling image ==="
+            docker pull ghcr.io/deeprun-academy/openedx:prod
+
+            echo "=== Configuring Tutor to use GHCR image ==="
+            tutor config save \
+              --set DOCKER_IMAGE_OPENEDX=ghcr.io/deeprun-academy/openedx:prod
+
+            echo "=== Restarting ==="
+            docker compose -f ~/.local/share/tutor/env/local/docker-compose.yml -f ~/.local/share/tutor/env/local/docker-compose.prod.yml --project-name tutor_local up -d lms cms lms-worker cms-worker
+
+            echo "=== Running migrations ==="
+            tutor local run lms ./manage.py lms migrate --noinput
+            tutor local run cms ./manage.py cms migrate --noinput
+
+            echo "=== Prod deploy complete ==="
