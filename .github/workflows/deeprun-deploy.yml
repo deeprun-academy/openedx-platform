@@ -219,10 +219,6 @@ jobs:
             echo "=== Cleaning up unused images ==="
             docker image prune -af --filter "until=1h" || true
 
-            echo "=== Updating Tutor plugin ==="
-            PLUGIN_ROOT=$(tutor plugins printroot)
-            curl -sL "https://raw.githubusercontent.com/deeprun-academy/tutor-config/main/plugins/deeprun.py" -o "$PLUGIN_ROOT/deeprun.py"
-
             echo "=== Pulling image ==="
             docker pull ghcr.io/deeprun-academy/openedx:dev
 
@@ -231,7 +227,7 @@ jobs:
               --set DOCKER_IMAGE_OPENEDX=ghcr.io/deeprun-academy/openedx:dev
 
             echo "=== Restarting ==="
-            docker compose -f ~/.local/share/tutor/env/local/docker-compose.yml -f ~/.local/share/tutor/env/local/docker-compose.prod.yml --project-name tutor_local up --remove-orphans -d
+            docker compose -f ~/.local/share/tutor/env/local/docker-compose.yml -f ~/.local/share/tutor/env/local/docker-compose.prod.yml --project-name tutor_local up -d lms cms lms-worker cms-worker
 
             echo "=== Running migrations ==="
             tutor local run lms ./manage.py lms migrate --noinput
@@ -267,10 +263,6 @@ jobs:
             echo "=== Cleaning up unused images ==="
             docker image prune -af --filter "until=1h" || true
 
-            echo "=== Updating Tutor plugin ==="
-            PLUGIN_ROOT=$(tutor plugins printroot)
-            curl -sL "https://raw.githubusercontent.com/deeprun-academy/tutor-config/main/plugins/deeprun.py" -o "$PLUGIN_ROOT/deeprun.py"
-
             echo "=== Pulling image ==="
             docker pull ghcr.io/deeprun-academy/openedx:uat
 
@@ -279,7 +271,7 @@ jobs:
               --set DOCKER_IMAGE_OPENEDX=ghcr.io/deeprun-academy/openedx:uat
 
             echo "=== Restarting ==="
-            docker compose -f ~/.local/share/tutor/env/local/docker-compose.yml -f ~/.local/share/tutor/env/local/docker-compose.prod.yml --project-name tutor_local up --remove-orphans -d
+            docker compose -f ~/.local/share/tutor/env/local/docker-compose.yml -f ~/.local/share/tutor/env/local/docker-compose.prod.yml --project-name tutor_local up -d lms cms lms-worker cms-worker
 
             echo "=== Running migrations ==="
             tutor local run lms ./manage.py lms migrate --noinput
@@ -315,10 +307,6 @@ jobs:
             echo "=== Cleaning up unused images ==="
             docker image prune -af --filter "until=1h" || true
 
-            echo "=== Updating Tutor plugin ==="
-            PLUGIN_ROOT=$(tutor plugins printroot)
-            curl -sL "https://raw.githubusercontent.com/deeprun-academy/tutor-config/main/plugins/deeprun.py" -o "$PLUGIN_ROOT/deeprun.py"
-
             echo "=== Pulling image ==="
             docker pull ghcr.io/deeprun-academy/openedx:prod
 
@@ -327,7 +315,7 @@ jobs:
               --set DOCKER_IMAGE_OPENEDX=ghcr.io/deeprun-academy/openedx:prod
 
             echo "=== Restarting ==="
-            docker compose -f ~/.local/share/tutor/env/local/docker-compose.yml -f ~/.local/share/tutor/env/local/docker-compose.prod.yml --project-name tutor_local up --remove-orphans -d
+            docker compose -f ~/.local/share/tutor/env/local/docker-compose.yml -f ~/.local/share/tutor/env/local/docker-compose.prod.yml --project-name tutor_local up -d lms cms lms-worker cms-worker
 
             echo "=== Running migrations ==="
             tutor local run lms ./manage.py lms migrate --noinput
