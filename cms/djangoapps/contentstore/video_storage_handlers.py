@@ -870,6 +870,14 @@ def videos_post(course, request):
 def storage_service_bucket():
     """
     Returns an S3 bucket for video upload.
+
+    Credentials resolution:
+      * Devstack path keeps legacy behaviour (explicit settings incl. security token).
+      * Production path prefers explicit `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` when set,
+        and otherwise falls back to the boto3 credential chain (env vars, shared config,
+        EC2 IAM role via IMDSv2). The legacy `boto` library used here cannot speak IMDSv2
+        on its own, which broke Studio video uploads on EC2 instances running with the
+        AWS-default `HttpTokens=required` — see deeprun-academy/openedx-platform#30.
     """
     if ENABLE_DEVSTACK_VIDEO_UPLOADS.is_enabled():
         params = {
@@ -879,10 +887,30 @@ def storage_service_bucket():
 
         }
     else:
+        access_key = settings.AWS_ACCESS_KEY_ID
+        secret_key = settings.AWS_SECRET_ACCESS_KEY
+        security_token = None
+        if not access_key or not secret_key:
+            # Fall back to the boto3 credential chain (env, shared config, IAM role via IMDSv2).
+            import boto3
+            frozen = None
+            creds = boto3.Session().get_credentials()
+            if creds is not None:
+                frozen = creds.get_frozen_credentials()
+            if frozen is None or not frozen.access_key or not frozen.secret_key:
+                raise RuntimeError(
+                    "No AWS credentials available for video upload bucket: set "
+                    "AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY or attach an IAM instance role."
+                )
+            access_key = frozen.access_key
+            secret_key = frozen.secret_key
+            security_token = frozen.token
         params = {
-            'aws_access_key_id': settings.AWS_ACCESS_KEY_ID,
-            'aws_secret_access_key': settings.AWS_SECRET_ACCESS_KEY
+            'aws_access_key_id': access_key,
+            'aws_secret_access_key': secret_key,
         }
+        if security_token:
+            params['security_token'] = security_token
 
     conn = S3Connection(**params)
 

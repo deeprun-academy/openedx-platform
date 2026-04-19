@@ -1666,6 +1666,44 @@ class GetStorageBucketTestCase(TestCase):
         self.assertIn("https://vem_test_bucket.s3.amazonaws.com:443/test_root/", upload_url)
         self.assertIn(edx_video_id, upload_url)
 
+    @override_settings(AWS_ACCESS_KEY_ID=None, AWS_SECRET_ACCESS_KEY=None)
+    @override_settings(VIDEO_UPLOAD_PIPELINE={
+        "VEM_S3_BUCKET": "vem_test_bucket", "BUCKET": "test_bucket", "ROOT_PATH": "test_root"
+    })
+    def test_storage_bucket_falls_back_to_boto3_credentials(self):
+        """When explicit AWS keys are unset (IAM role deploy), credentials come from
+        the boto3 chain (env vars, shared config, EC2 IMDSv2 instance role)."""
+        frozen = Mock(access_key='boto3_key', secret_key='boto3_secret', token='boto3_token')
+        session = Mock()
+        session.get_credentials.return_value.get_frozen_credentials.return_value = frozen
+
+        with patch('boto3.Session', return_value=session) as session_cls, \
+                patch(
+                    'cms.djangoapps.contentstore.video_storage_handlers.S3Connection'
+                ) as s3_conn_cls:
+            storage_service_bucket()
+
+        session_cls.assert_called_once_with()
+        s3_conn_cls.assert_called_once_with(
+            aws_access_key_id='boto3_key',
+            aws_secret_access_key='boto3_secret',
+            security_token='boto3_token',
+        )
+
+    @override_settings(AWS_ACCESS_KEY_ID=None, AWS_SECRET_ACCESS_KEY=None)
+    @override_settings(VIDEO_UPLOAD_PIPELINE={
+        "VEM_S3_BUCKET": "vem_test_bucket", "BUCKET": "test_bucket", "ROOT_PATH": "test_root"
+    })
+    def test_storage_bucket_raises_when_no_credentials_available(self):
+        """Fail loudly rather than passing None into boto when the IAM role is missing."""
+        session = Mock()
+        session.get_credentials.return_value = None
+
+        with patch('boto3.Session', return_value=session), \
+                patch('cms.djangoapps.contentstore.video_storage_handlers.S3Connection'):
+            with self.assertRaisesRegex(RuntimeError, 'No AWS credentials available'):
+                storage_service_bucket()
+
 
 class CourseYoutubeEdxVideoIds(ModuleStoreTestCase):
     """
