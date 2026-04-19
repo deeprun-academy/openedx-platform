@@ -32,7 +32,7 @@ def noop(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("video_pipeline", "0003_coursevideouploadsenabledbydefault_videouploadsenabledbydefault"),
+        ("video_pipeline", "0007_delete_videopipelineintegration"),
     ]
 
     operations = [
